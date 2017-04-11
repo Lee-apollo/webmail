@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+
+{% block title %}
+success
+{% endblock %}
+
+{% block body %}
+You are registered!
+
+    {% if message %}
+        {{message}}
+    {% endif %}
+
+{% endblock %}
+

@@ -5,20 +5,11 @@ Registration page
 {% endblock %}
 
 {% block body %}
-<h2>Login</h2>
-<form action="{{ url_for('register') }}" method="post">
-    Username: <input name="username" type="text"/><br>
-    Password: <input name="pass" type="password"/><br>
-    <input type="submit" value="Login"/>
-</form>
-
-<br> --- OR ---
-
 <h2>Registration</h2>
-<form action="{{ url_for('register') }}" method="post">
+<form action="{{ url_for('registration') }}" method="post">
     Name:     <input name="name" type="text"/><br>
     Username: <input name="username" type="text"/><br>
-    Password: <input name="pass" type="password"/><br>
+    Password: <input name="password" type="password"/><br>
     <input type="submit" value="Register"/>
 </form>
 {% endblock %}

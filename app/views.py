@@ -2,6 +2,48 @@ from app import app
 
 from flask import Flask, abort, redirect, render_template, session, url_for, request, escape
 from werkzeug.utils import secure_filename
+from flask_sqlalchemy import SQLAlchemy
+
+# Flask-SQLAlchemy
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///ztelesneny-neuspech.db"
+app.config["SQLALCHEMY_ECHO"] = True
+db = SQLAlchemy(app)
+
+class User(db.Model):
+
+    __tablename__ = "users"
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.Text, unique=True)
+    passwd = db.Column(db.Text)
+    name = db.Column(db.Text)
+
+    def __init__(self, username, passwd, name):
+        self.username = username
+        self.name = name
+        self.passwd = passwd
+
+class Message(db.Model):
+
+    __tablename__ = "messages"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer)
+    unread = db.Column(db.Integer)
+    addrTo = db.Column(db.Text)
+    addrFrom = db.Column(db.Text)
+    subject = db.Column(db.Text)
+    body = db.Column(db.Text)
+
+    def __init__(self, user_id, addrTo, addFrom, subject, body):
+        self.user_id = user_id
+        self.unread = 1 #TODO Add better boolean expresion
+        self.addrTo = addrTo
+        self.addrFrom = addrFrom
+        self.subject = subject
+        self.body = body
+
+
+
 
 
 def getEmails(username):
@@ -89,7 +131,7 @@ def logout():
         del(session['username'])
     return redirect(url_for('index'))
 
-         
+
 @app.route('/registration', methods=["GET", "POST"])
 def registration():
     if request.method == "GET":
@@ -98,15 +140,23 @@ def registration():
     elif request.method == "POST":
         # check input data
 
-        if request.form["name"] == "" or request.form["passwd"] == "":
+        if request.form["username"] == "" or request.form["password"] == "" or request.form["name"] == "":
             # Show error message and stay on registration page
-            return "ERROR"
-        else:
-            # Show register OK
-            return render_template("registration.html")
+            return render_template("registration.html", error="Invalid values")
+
+        registrant = User(request.form["username"], request.form["password"], request.form["name"])
+        db.session.add(registrant)
+        db.session.commit()
+
+        # Show register OK
+        return redirect(url_for('success'))
     else:
         return "Unknown method"
 
+@app.route('/success', methods=["GET"])
+def success():
+    users = User.query.all()
+    return render_template('login.html', message=users)
 
 ########
 
