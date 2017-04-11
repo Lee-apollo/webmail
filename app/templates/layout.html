@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta content="initial-scale=1, width=device-width" name="viewport"/>
+        <title>{% block title %}{% endblock %}</title>
+    </head>
+    <body>
+	{% if logged_in %}
+        <div id='div1'>
+            <a href="/index">Home</a>
+            <a href="/index">New email</a>
+            <a href="/index">Inbox</a>
+            <a href="/index">Outbox</a>
+        </div>
+	{% else %}
+        <div>
+            <a href="/login">Login</a>
+        </div>
+	{% endif %}
+
+        <div id='div2'>
+            {% block body %}{% endblock %}
+        </div>
+    </body>
+</html>
+
