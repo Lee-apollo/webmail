@@ -1,11 +1,10 @@
 from app import app
 
-from flask import Flask, redirect, render_template, session, url_for, request
+from flask import Flask, abort, redirect, render_template, session, url_for, request, escape
 from werkzeug.utils import secure_filename
 
-@app.route('/')
-@app.route('/index')
-def index():
+
+def getEmails(username):
     mails = [ # fake array of emails
         { "from" : "Petr@fake-email.com",
           "to": "Petr@ztelesneny-neuspech.com",
@@ -23,16 +22,73 @@ def index():
           "body" : "Hi Petr"
         }
     ]
+    return mails
 
-    user = {'name': 'Petr'}  # fake user
-    return render_template("index.html", title="Home", user=user, mails=mails)
 
-@app.route('/login', methods=["GET", "POST"])
+@app.route('/')
+@app.route('/index')
+def index():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+
+    
+    username = escape(session['username'])
+    #user = {'name': 'Petr'}  # fake user
+
+    user = {'name' : username}
+    emails = getEmails(username)
+
+    return render_template("index.html", title="Home", user=user, mails=emails, logged_in = True)
+
+
+#users = {{'name' : 'Petr', 'password' = 'pass123'}, {'name' : 'Test', 'password' = 'heslo'}}
+    
+users = { "Petr" : "pass123", "test": "heslo"}
+    
+def valid_login(username, password):
+    
+    if username in users and users[username] == password:
+        return True
+    return False
+
+
+def log_the_user_in(username):
+    #Modify session - log in user and redirect to index
+
+    if request.method == 'POST':
+        session['username'] = request.form['username']
+    
+    return redirect(url_for('index'))
+
+
+@app.route('/login', methods=['POST', 'GET'])
 def login():
-    if request.method == "GET":
-	return render_template("login.html", message=None)
-    elif request.method == "POST":
-        if request.form["username"] and request.form["passwd"]:
+    
+    # If user is already logged in, redirect to index
+    if 'username' in session:
+        return redirect(url_for('index'))
+    
+    error = None
+    if request.method == 'POST':
+        if valid_login(request.form['username'],
+                       request.form['password']):
+            return log_the_user_in(request.form['username'])
+        else:
+            error = 'Invalid username/password'
+
+    # the code below is executed if the request method
+    # was GET or the credentials were invalid
+    return render_template('login.html', message=error)
+
+
+@app.route('/logout', methods=['GET'])
+def logout():
+    error = None
+    if 'username' in session:
+            #session.pop('username', None)
+        del(session['username'])
+    return redirect(url_for('index'))
+
          
 @app.route('/registration', methods=["GET", "POST"])
 def registration():
@@ -54,45 +110,14 @@ def registration():
 
 ########
 
-         
-def valid_login(username, password):
-    return False;
-
-def log_the_user_in(username):
-    return ("User %s loged in" % (username))
-
-@app.route('/login', methods=['POST', 'GET'])
-def login():
-    error = None
-    if request.method == 'POST':
-        if valid_login(request.form['username'],
-                       request.form['password']):
-            return log_the_user_in(request.form['username'])
-        else:
-            error = 'Invalid username/password'
-    # the code below is executed if the request method
-    # was GET or the credentials were invalid
-    return render_template('login.html', error=error)
-
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
         f = request.files['the_file']
         f.save('/var/www/uploads/uploaded_file.txt/' + secure_filename(f.filename))
 
-
-
-from flask import abort, redirect, url_for
-
-
-## Redirect 
-@app.route('/')
-def index():
-    return redirect(url_for('login'))
-
-
 ## Errors
 @app.route('/error') # /login
-def login():
+def error():
     abort(401)
     this_is_never_executed()
