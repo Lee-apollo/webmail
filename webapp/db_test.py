@@ -1,4 +1,4 @@
-from db_interface import add_user, is_login_valid, list_users, get_emails_by_user, list_emails
+from db_interface import add_user, is_login_valid, list_users, get_emails_by_user, list_emails, get_user
 
 
 def hash(passwd):
@@ -6,14 +6,23 @@ def hash(passwd):
 
 if __name__ == "__main__":
 
+    print("Users:")
     list_users()
        
-    print("EMAILS:")
+    print("Emails:")
     list_emails()
 
+    user = get_user(1)
+    print(user.name)
+    print(user.login)
+    print(user.id)
+   
+    exit(0)
     
-    emails = get_emails_by_user("Apollo")
-    print(emails)
+    emails = get_emails_by_user("Petr")
+    for email in emails:
+        email.as_dict()
+
 
     login = input("User name:")
     pass_hash = hash(input("Password:"))

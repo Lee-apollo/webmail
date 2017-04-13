@@ -12,5 +12,9 @@ Registration page
     Password: <input name="password" type="password"/><br>
     <input type="submit" value="Register"/>
 </form>
+
+{% if message %}
+<div id="message1">{{message}}</div>
+{% endif %}
 {% endblock %}
 

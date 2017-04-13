@@ -3,7 +3,7 @@ import sqlite3
 
 
 # Create connection
-db_conn = sqlite3.connect('example.db')
+db_conn = sqlite3.connect('example.db', check_same_thread=False)
 
 # Get cursor
 curs = db_conn.cursor()
@@ -11,6 +11,13 @@ curs = db_conn.cursor()
 def LOG(message):
     print(message)
     return
+
+class User():
+    def __init__(login, name, id):
+        self.login = login
+        self.name = name
+        self.id = id
+
 
 def create_table_users():
     # Create table
@@ -63,6 +70,7 @@ def create_tables():
         LOG("Table 'emails' already exists")
         pass
 
+
 def is_login_valid(login, pass_hash):
     cmd = '''SELECT * FROM users WHERE login = ? and pass_hash = ?;'''
     LOG(cmd)
@@ -71,6 +79,7 @@ def is_login_valid(login, pass_hash):
     if len(result) == 1:
         return True
     return False
+
 
 def is_login_valid_old(login, pass_hash):
     cmd = '''SELECT * FROM users WHERE login = '%s' and pass_hash = '%s';''' % (login, pass_hash)
@@ -82,6 +91,7 @@ def is_login_valid_old(login, pass_hash):
         return True
     return False
 
+
 def add_user(login, name, pass_hash):
     cmd = '''INSERT INTO users (login, name, pass_hash) VALUES (?, ?, ?);'''
     # % (login, name, pass_hash)
@@ -89,61 +99,91 @@ def add_user(login, name, pass_hash):
     curs.execute(cmd, (login, name, pass_hash))
     db_conn.commit()
 
+
 def list_users():
     cmd = '''SELECT * FROM users'''
     print(cmd)
     for row in curs.execute(cmd):
         print(row)
 
+
+def get_user(user_id):
+    cmd = '''SELECT login, name, id FROM users WHERE id = ?'''
+    result = [row for row in curs.execute(cmd, (user_id,))]
+    print(result)
+    if (len(result) == 1):
+        login = result[0][0]
+        name = result[0][1]
+        id = result[0][2]
+        print("Tralala %s, %s, %s" % (login, name, id))
+        #x = User(login = result[0][0], name = result[0][1], id = result[0][2])
+        x = User("Apollo", "Petttttr", id = 42)
+        print(x)
+        return x
+    raise
+
+
 def get_user_id(login):
-    cmd = '''SELECT * FROM users WHERE login = ?'''
+    cmd = '''SELECT id FROM users WHERE login = ?'''
     result = [row for row in curs.execute(cmd, (login,))]
+    print(result)
     if (len(result) == 1):
         return result[0][0]
     raise
+
     
 def get_emails(user_id):
     cmd = '''SELECT * FROM emails WHERE user_id = ?'''
-    return [row for row in curs.execute(cmd, (user_id,))]
+
+    # Create Message object from SQL response - skip first (id) column
+    return [Message(row[1:]) for row in curs.execute(cmd, (user_id,))]
 
 
 def get_emails_by_user(login):
     user_id = get_user_id(login)
     return get_emails(user_id)
 
-
 class Message():
-    id
-    user_id
-    unread
-    addrTo
-    addrFrom
-    subject
-    body
+    id = None
+    unread = None
+    addr_to = None
+    addr_from  = None
+    subject = None
+    body = None
 
+    # Init from tuple
+    def __init__(self, input_data):
+        if type(input_data) == dict:
+            self.from_dict(input_data)
+        else:
+            self.from_tuple(input_data)
 
-    def as_tuple(self, sqlRow):
+    def from_dict(self, input_dict):
+        self.addr_from = input_dict["from"]
+        self.addr_to   = input_dict["to"]
+        self.subject   = input_dict["subject"]
+        self.body      = input_dict["body"]
+        self.user_id   = input_dict["user_id"]
+        
+    def from_tuple(self, input_tuple):
+        (self.user_id, self.unread, self.addr_to, self.addr_from, self.subject, self.body) = input_tuple
+
+    def as_tuple(self):
         return (self.user_id, self.unread, self.addr_to, self.addr_from, self.subject, self.body)
 
-    def from_tuple(self, sqlRow):
-        (self.user_id, self.unread, self.addr_to, self.addr_from, self.subject, self.body) = sqlRow
-
     def as_dict(self):
-        (self.user_id, self.unread, self.addr_to, self.addr_from, self.subject, self.body) = sqlRow
-
-        return {"from"    : self.add_from,
+        return {"from"    : self.addr_from,
                 "to"      : self.addr_to,
                 "subject" : self.subject,
                 "body"    : self.body,
                 "user_id" : self.user_id
                 }
 
-
-def add_email(addr_from, addr_to, subject, body, user_id):
+def add_email(message):
     cmd = '''INSERT INTO emails 
            (user_id, unread, addr_to, addr_from, subject, body)
-           VALUES (?, 1, ?, ?, ?, ?);'''
-    curs.execute(cmd, (user_id, addr_to, addr_from, subject, body))
+           VALUES (?, ?, ?, ?, ?, ?);'''
+    curs.execute(cmd, message.as_tuple())
     db_conn.commit()
 
 def list_emails():
@@ -152,19 +192,17 @@ def list_emails():
     for row in curs.execute(cmd):
         print(row)
 
-
-
 # Try to create table
 create_tables()
 
 if __name__=="__main__":
     list_users()
-    #add_user("Petr", "John Doe", "pass123")
-    #list_users()
-    #add_user("Master", "Zdenda", "123qwe")
-    #list_users()
-    #add_user("xyzSuperUser", "Jan", "pppp")
-    #list_users()
+    add_user("Petr", "John Doe", "pass123")
+    list_users()
+    add_user("Master", "Zdenda", "123qwe")
+    list_users()
+    add_user("xyzSuperUser", "Jan", "pppp")
+    list_users()
 
     list_emails()
 
@@ -189,13 +227,14 @@ if __name__=="__main__":
         }
     ]
     
-    #for email in emails:
-    #    add_email(email["from"], email["to"], email["subject"], email["body"], get_user_id(email["user"]))
-    #    list_emails()
+    for email in emails:
+        add_email(Message((get_user_id(email["user"]), 1, email["to"], email["from"], email["subject"], email["body"])))
+        list_emails()
 
     print("EMAILS:")
 
-    print(get_emails_by_user("Apollo"))
+    for email in get_emails_by_user("Petr"):
+        print(email.as_dict())
 
     db_conn.close()
 
